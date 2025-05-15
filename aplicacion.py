@@ -6,10 +6,8 @@ from datetime import datetime
 import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
-import pandas as pd  # Asegúrate de tener pandas instalado
-import io  # Necesario para BytesIO
-import gdown
-import streamlit.components.v1 as components
+import pandas as pd
+import io
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -22,18 +20,43 @@ class_names = [
 
 # Descripciones de las clases
 class_descriptions = {
-    'TANGARA DE LENTEJUELAS': "La tangara de lentejuelas se caracteriza por su vibrante coloración verde y azul...",
-    'TANGARA MATORRALERA': "Esta especie habita los matorrales y tiene un plumaje colorido...",
-    # Agrega el resto de las descripciones aquí
+    'TANGARA DE LENTEJUELAS': "La tangara de lentejuelas se caracteriza por su vibrante coloración verde y azul, con reflejos metálicos que imitan lentejuelas.",
+    'TANGARA MATORRALERA': "Esta especie habita los matorrales y tiene un plumaje colorido que va desde el verde hasta el rojo y amarillo.",
+    'TANGARA NUQUIRRUFA': "Una tangara de tonos predominantes en verde y amarillos, conocida por su canto melodioso.",
+    'TANGARA PINTOJA': "La tangara pintoja es una especie que destaca por su colorido plumaje en tonos marrones y anaranjados.",
+    'PINTOJA PALMERA': "Esta especie habita las palmas de América Central, y su plumaje presenta una mezcla de tonos marrones y verdes.",
+    'TANGARA AZULGRIS': "Con su distintivo color azul grisáceo, esta tangara se encuentra en las selvas tropicales de Sudamérica.",
+    'TANGARA AZULINEGRA': "Una especie con colores que van desde el azul eléctrico hasta el negro, visible en zonas de montaña.",
+    'TANGARA CABECIAZUL': "La tangara cabeciazul tiene una característica coloración azul en su cabeza y pecho, con el resto de su cuerpo en tonos verdes.",
+    'TANGARA CAPUCHA DORADA': "Con su característica capucha dorada, esta tangara es un espectáculo visual en las selvas tropicales.",
+    'TANGARA CORONINEGRA': "Su característica es su corona negra y plumaje colorido en tonos rojos y amarillos.",
+    'CHIPE AMARILLO FINAL': "Un pequeño chip de color amarillo brillante que habita áreas abiertas y bordes de bosque.",
+    'CHIPE CABEZA NEGRA FINAL': "Este chip tiene una cabeza negra contrastante con el resto de su cuerpo de colores más apagados.",
+    'CHIPE CASTAÑO FINAL': "Un chip de color castaño, con una excelente capacidad para camuflarse en su hábitat natural.",
+    'CHIPE DORSO VERDE FINAL': "Con un característico dorso verde, este chip es común en áreas boscosas.",
+    'CHIPE FLANCOS CASTAÑOS FINAL': "Este chip tiene flancos castaños y una notable capacidad para moverse rápidamente entre los arbustos.",
+    'CHIPE GARGANTA AMARILLA FINAL': "Con una garganta de color amarillo brillante, este chip es fácil de identificar entre la vegetación.",
+    'CHIPE GARGANTA NARANJA FINAL': "Similar al anterior, pero con una garganta de color naranja intenso.",
+    'CHIPE GORRA CANELA SUREÑO FINAL': "Este chip se destaca por su gorra de color canela, especialmente visible en los climas sureños.",
+    'TROPICAL PARULA FINAL': "Un pequeño y vibrante pájaro de los trópicos, conocido por sus colores brillantes y su comportamiento activo."
 }
 
 # Cargar modelo entrenado
+import gdown
+
+# ID del archivo de Google Drive
 file_id = "1rh2AvU4O0aboTqIN_BLh_u1D5J868Aln"
+
+# Enlace directo (convertido)
 url = f"https://drive.google.com/uc?id={file_id}"
+
+# Nombre temporal del archivo descargado
 model_path = "best_model.keras"
+
+# Descargar el modelo desde Drive
 gdown.download(url, model_path, quiet=False)
 
-# Cargar el modelo
+# Cargar el modelo descargado
 model = load_model(model_path)
 print("✅ Modelo cargado correctamente desde Google Drive")
 
@@ -69,6 +92,7 @@ def obtener_avistamientos():
         print(f"Error: El archivo {archivo} no fue encontrado.")
     except Exception as e:
         print(f"Error al leer el archivo: {e}")
+    
     return avistamientos
 
 # Streamlit UI
@@ -113,32 +137,12 @@ if st.button('Guardar Avistamiento'):
 st.subheader('Avistamientos Registrados')
 avistamientos = obtener_avistamientos()
 
-# Mostrar los avistamientos en una tabla
+# Mostrar los avistamientos en un mapa
 if avistamientos:
     df_avistamientos = pd.DataFrame(avistamientos)
-    st.write(df_avistamientos)
-
-    # Mostrar en el mapa (Google Maps o Streamlit map)
     st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
+    
+    # Mostrar los avistamientos en una tabla
+    st.write(df_avistamientos[['lat', 'lng', 'prediction', 'fecha_hora']])
 else:
     st.write("No se han registrado avistamientos.")
-
-# Incluir el mapa de Google Maps con la API
-st.subheader('Ubicación de los Avistamientos')
-
-# Incluyendo Google Maps con API Key
-google_maps_html = """
-<div style="width: 100%; height: 500px;">
-    <iframe width="100%" height="100%" 
-        src="https://www.google.com/maps/embed/v1/place?key=AIzaSyCZR_MdAc09QAW0nWJvlCdcwIx_CQQoM2Y
-            &q=Latitud,Lng" frameborder="0" style="border:0;" allowfullscreen>
-    </iframe>
-</div>
-"""
-# Reemplazamos las coordenadas de los avistamientos en el mapa de Google
-if avistamientos:
-    last_avistamiento = avistamientos[-1]  # Tomamos el último avistamiento
-    google_maps_html = google_maps_html.replace("Latitud", str(last_avistamiento['lat']))
-    google_maps_html = google_maps_html.replace("Lng", str(last_avistamiento['lng']))
-    components.html(google_maps_html, height=500)
-
