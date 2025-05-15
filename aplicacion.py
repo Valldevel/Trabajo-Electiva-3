@@ -86,7 +86,7 @@ def obtener_avistamientos():
     return avistamientos
 
 # Interfaz Streamlit
-st.title('Clasificador de Aves')
+st.title('Avistamiento de Aves')
 
 # Subir imagen
 uploaded_file = st.file_uploader("Sube una imagen de un ave", type=["jpg", "jpeg", "png"])
