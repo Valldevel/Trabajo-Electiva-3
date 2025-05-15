@@ -6,6 +6,7 @@ from datetime import datetime
 import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
+import io  # Asegúrate de importar io
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -40,9 +41,7 @@ class_descriptions = {
 }
 
 # Cargar modelo entrenado
-# Cargar modelo entrenado
 import gdown
-
 
 # ID del archivo de Google Drive
 file_id = "1rh2AvU4O0aboTqIN_BLh_u1D5J868Aln"
@@ -115,7 +114,7 @@ if uploaded_file is not None:
     description = class_descriptions.get(prediction, "Descripción no disponible.")
     
     # Mostrar imagen clasificada
-    buffered = io.BytesIO()
+    buffered = io.BytesIO()  # Esto debería funcionar sin problemas ahora que se importa io
     img.save(buffered, format="JPEG")
     image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
     st.image(img, caption="Imagen clasificada", use_column_width=True)
@@ -143,4 +142,3 @@ if avistamientos:
         st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
 else:
     st.write("No se han registrado avistamientos.")
-
