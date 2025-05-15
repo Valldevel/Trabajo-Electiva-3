@@ -43,7 +43,25 @@ class_descriptions = {
 }
 
 # Cargar modelo entrenado
-model = load_model('models/model_VGG16_v.keras')
+import gdown
+
+
+# ID del archivo de Google Drive
+file_id = "1rh2AvU4O0aboTqIN_BLh_u1D5J868Aln"
+
+# Enlace directo (convertido)
+url = f"https://drive.google.com/uc?id={file_id}"
+
+# Nombre temporal del archivo descargado
+model_path = "best_model.keras"
+
+# Descargar el modelo desde Drive
+gdown.download(url, model_path, quiet=False)
+
+# Cargar el modelo descargado
+model = load_model(model_path)
+print("✅ Modelo cargado correctamente desde Google Drive")
+
 
 # Función para guardar avistamientos en el Excel
 def guardar_avistamiento(lat, lng, prediction):
