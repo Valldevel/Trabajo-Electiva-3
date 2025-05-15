@@ -7,8 +7,9 @@ import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
 import io
-import pandas as pd  # Importamos pandas para manejar el DataFrame
-import streamlit.components.v1 as components  # Para incrustar HTML/JS
+import pandas as pd
+import streamlit.components.v1 as components
+import gdown
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -42,26 +43,15 @@ class_descriptions = {
     'TROPICAL PARULA FINAL': "Un pequeño y vibrante pájaro de los trópicos, conocido por sus colores brillantes y su comportamiento activo."
 }
 
-# Cargar modelo entrenado
-import gdown
-
-# ID del archivo de Google Drive
+# Cargar modelo desde Google Drive
 file_id = "1rh2AvU4O0aboTqIN_BLh_u1D5J868Aln"
-
-# Enlace directo (convertido)
 url = f"https://drive.google.com/uc?id={file_id}"
-
-# Nombre temporal del archivo descargado
 model_path = "best_model.keras"
-
-# Descargar el modelo desde Drive
 gdown.download(url, model_path, quiet=False)
-
-# Cargar el modelo descargado
 model = load_model(model_path)
 print("✅ Modelo cargado correctamente desde Google Drive")
 
-# Función para guardar avistamientos en el Excel
+# Función para guardar avistamiento en Excel
 def guardar_avistamiento(lat, lng, prediction):
     archivo = "avistamientos.xlsx"
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -75,7 +65,7 @@ def guardar_avistamiento(lat, lng, prediction):
     sheet.append([lat, lng, prediction, now])
     wb.save(archivo)
 
-# Obtener los avistamientos registrados desde el archivo Excel
+# Función para obtener avistamientos
 def obtener_avistamientos():
     archivo = "avistamientos.xlsx"
     avistamientos = []
@@ -93,20 +83,17 @@ def obtener_avistamientos():
         print(f"Error: El archivo {archivo} no fue encontrado.")
     except Exception as e:
         print(f"Error al leer el archivo: {e}")
-    
     return avistamientos
 
-# Streamlit UI
+# Interfaz Streamlit
 st.title('Clasificador de Aves')
 
-# Subir archivo de imagen
+# Subir imagen
 uploaded_file = st.file_uploader("Sube una imagen de un ave", type=["jpg", "jpeg", "png"])
 
 prediction = None
 description = None
-image_data = None
 
-# Clasificación de imagen
 if uploaded_file is not None:
     img = Image.open(uploaded_file).convert('RGB').resize((224, 224))
     img_array = np.expand_dims(np.array(img) / 255.0, axis=0)
@@ -114,45 +101,69 @@ if uploaded_file is not None:
     idx = np.argmax(preds, axis=1)[0]
     prediction = class_names[idx]
     description = class_descriptions.get(prediction, "Descripción no disponible.")
-    
-    # Mostrar imagen clasificada
-    buffered = io.BytesIO()
-    img.save(buffered, format="JPEG")
-    image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
+
     st.image(img, caption="Imagen clasificada", use_column_width=True)
     st.subheader(f"Predicción: {prediction}")
     st.write(description)
 
-# Inputs para registrar avistamientos
+# Registro de coordenadas
 lat = st.number_input('Latitud', format="%.6f")
 lng = st.number_input('Longitud', format="%.6f")
 
 if st.button('Guardar Avistamiento'):
-    if lat and lng:
+    if lat and lng and prediction:
         guardar_avistamiento(lat, lng, prediction)
         st.success('Avistamiento guardado exitosamente!')
     else:
-        st.error('Por favor, ingrese una latitud y longitud válidas.')
+        st.error('Por favor, asegúrate de haber cargado una imagen y de ingresar una latitud y longitud válidas.')
 
-# Mostrar avistamientos registrados en una tabla
+# Mostrar tabla y mapa de avistamientos
 st.subheader('Avistamientos Registrados')
-
 avistamientos = obtener_avistamientos()
 
-# Verificar si hay avistamientos
 if avistamientos:
-    # Convertir los avistamientos en un DataFrame de pandas
     df_avistamientos = pd.DataFrame(avistamientos)
+    st.dataframe(df_avistamientos)  # Tabla interactiva
 
-    # Mostrar los avistamientos como una tabla interactiva
-    st.dataframe(df_avistamientos)  # Usa st.dataframe para mostrar una tabla interactiva
+    # Mapa de Google Maps con múltiples marcadores
+    st.subheader('Mapa de Google Maps')
 
-    # Mostrar también el mapa
-    st.subheader('Mapa de Avistamientos')
-    st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
+    markers_js = ""
+    for _, row in df_avistamientos.iterrows():
+        markers_js += f"""
+        new google.maps.Marker({{
+            position: {{ lat: {row['lat']}, lng: {row['lng']} }},
+            map: map,
+            title: "{row['prediction']}"
+        }});"""
 
-    # Opcionalmente, mostrar detalles adicionales de cada avistamiento
-    for avistamiento in avistamientos:
-        st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
+    html_code = f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <script async defer
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZR_MdAc09QAW0nWJvlCdcwIx_CQQoM2Y&callback=initMap">
+        </script>
+        <script>
+          function initMap() {{
+            var map = new google.maps.Map(document.getElementById('map'), {{
+              zoom: 6,
+              center: {{ lat: {df_avistamientos['lat'].mean()}, lng: {df_avistamientos['lng'].mean()} }}
+            }});
+            {markers_js}
+          }}
+        </script>
+      </head>
+      <body onload="initMap()">
+        <div id="map" style="height: 500px; width: 100%;"></div>
+      </body>
+    </html>
+    """
+
+    components.html(html_code, height=600)
+
+    # Detalles adicionales
+    for av in avistamientos:
+        st.write(f"📍 Lat: {av['lat']}, Lng: {av['lng']} — 🐦 {av['prediction']} — 🕓 {av['fecha_hora']}")
 else:
-    st.write("No se han registrado avistamientos.")
+    st.write("No se han registrado avistamientos aún.")
