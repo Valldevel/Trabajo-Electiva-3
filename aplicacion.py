@@ -1,18 +1,22 @@
 import streamlit as st
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.models import load_model
 import numpy as np
 from PIL import Image
+import base64
+from datetime import datetime
+import openpyxl
+from openpyxl import Workbook
+from tensorflow.keras.models import load_model
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
     'TANGARA DE LENTEJUELAS', 'TANGARA MATORRALERA', 'TANGARA NUQUIRRUFA', 'TANGARA PINTOJA', 'PINTOJA PALMERA',
     'TANGARA AZULGRIS', 'TANGARA AZULINEGRA', 'TANGARA CABECIAZUL', 'TANGARA CAPUCHA DORADA', 'TANGARA CORONINEGRA',
-    'CHIPE AMARILLO FINAL', 'CHIPE CABEZA NEGRA FINAL', 'CHIPE CASTAÑO FINAL', 'CHIPE DORSO VERDE FINAL', 'CHIPE FLANCOS CASTAÑOS FINAL',
-    'CHIPE GARGANTA AMARILLA FINAL', 'CHIPE GARGANTA NARANJA FINAL', 'CHIPE GORRA CANELA SUREÑO FINAL', 'TROPICAL PARULA FINAL'
+    'CHIPE AMARILLO FINAL', 'CHIPE CABEZA NEGRA FINAL', 'CHIPE CASTAÑO FINAL', 'CHIPE DORSO VERDE FINAL',
+    'CHIPE FLANCOS CASTAÑOS FINAL', 'CHIPE GARGANTA AMARILLA FINAL', 'CHIPE GARGANTA NARANJA FINAL',
+    'CHIPE GORRA CANELA SUREÑO FINAL', 'TROPICAL PARULA FINAL'
 ]
 
-# Diccionario con las descripciones de las clases
+# Descripciones de las clases
 class_descriptions = {
     'TANGARA DE LENTEJUELAS': "La tangara de lentejuelas se caracteriza por su vibrante coloración verde y azul, con reflejos metálicos que imitan lentejuelas.",
     'TANGARA MATORRALERA': "Esta especie habita los matorrales y tiene un plumaje colorido que va desde el verde hasta el rojo y amarillo.",
@@ -35,46 +39,90 @@ class_descriptions = {
     'TROPICAL PARULA FINAL': "Un pequeño y vibrante pájaro de los trópicos, conocido por sus colores brillantes y su comportamiento activo."
 }
 
-# Cargar tu modelo personalizado (asegúrate de tener el archivo .h5 en el directorio adecuado)
+# Cargar modelo entrenado
 model = load_model('models/model_VGG16_v.keras')
 
-# Título de la aplicación
-st.title("Clasificador de Imágenes con Keras")
+# Función para guardar avistamientos en el Excel
+def guardar_avistamiento(lat, lng, prediction):
+    archivo = "avistamientos.xlsx"
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        wb = openpyxl.load_workbook(archivo)
+        sheet = wb.active
+    except FileNotFoundError:
+        wb = Workbook()
+        sheet = wb.active
+        sheet.append(["Latitud", "Longitud", "Predicción", "Fecha y Hora"])
+    sheet.append([lat, lng, prediction, now])
+    wb.save(archivo)
 
-# Subir imagen
-uploaded_file = st.file_uploader("Sube una imagen", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    # Mostrar la imagen cargada
-    img = Image.open(uploaded_file)
-
-    # Convertir la imagen a RGB (en caso de que sea RGBA)
-    img = img.convert('RGB')
-
-    st.image(img, caption="Imagen cargada", use_column_width=True)
-
-    # Preprocesar la imagen para el modelo
-    img = img.resize((224, 224))  # Tamaño esperado por muchos modelos (ajusta según tu modelo)
-    img_array = np.array(img)
+# Obtener los avistamientos registrados desde el archivo Excel
+def obtener_avistamientos():
+    archivo = "avistamientos.xlsx"
+    avistamientos = []
+    try:
+        wb = openpyxl.load_workbook(archivo)
+        sheet = wb.active
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            avistamientos.append({
+                'lat': row[0],
+                'lng': row[1],
+                'prediction': row[2],
+                'fecha_hora': row[3]
+            })
+    except FileNotFoundError:
+        print(f"Error: El archivo {archivo} no fue encontrado.")
+    except Exception as e:
+        print(f"Error al leer el archivo: {e}")
     
-    # Convertir la imagen a formato compatible con Keras
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0  # Normalización si es necesario (dependiendo del entrenamiento)
+    return avistamientos
 
-    # Realizar la predicción
-    predictions = model.predict(img_array)
+# Streamlit UI
+st.title('Clasificador de Aves')
 
-    # Obtener la clase predicha (índice)
-    predicted_class_idx = np.argmax(predictions, axis=1)[0]
+# Subir archivo de imagen
+uploaded_file = st.file_uploader("Sube una imagen de un ave", type=["jpg", "jpeg", "png"])
 
-    # Obtener el nombre de la clase predicha usando el índice
-    predicted_class_name = class_names[predicted_class_idx]
+prediction = None
+description = None
+image_data = None
 
-    # Obtener la descripción de la clase predicha
-    predicted_class_description = class_descriptions.get(predicted_class_name, "No hay descripción disponible.")
+# Clasificación de imagen
+if uploaded_file is not None:
+    img = Image.open(uploaded_file).convert('RGB').resize((224, 224))
+    img_array = np.expand_dims(np.array(img) / 255.0, axis=0)
+    preds = model.predict(img_array)
+    idx = np.argmax(preds, axis=1)[0]
+    prediction = class_names[idx]
+    description = class_descriptions.get(prediction, "Descripción no disponible.")
+    
+    # Mostrar imagen clasificada
+    buffered = io.BytesIO()
+    img.save(buffered, format="JPEG")
+    image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
+    st.image(img, caption="Imagen clasificada", use_column_width=True)
+    st.subheader(f"Predicción: {prediction}")
+    st.write(description)
 
-    # Mostrar los resultados
-    st.subheader("Predicción:")
-    st.write(f"La clase predicha es: **{predicted_class_name}** con probabilidad de {np.max(predictions) * 100:.2f}%")
-    st.subheader("Descripción:")
-    st.write(predicted_class_description)
+# Inputs para registrar avistamientos
+lat = st.number_input('Latitud', format="%.6f")
+lng = st.number_input('Longitud', format="%.6f")
+
+if st.button('Guardar Avistamiento'):
+    if lat and lng:
+        guardar_avistamiento(lat, lng, prediction)
+        st.success('Avistamiento guardado exitosamente!')
+    else:
+        st.error('Por favor, ingrese una latitud y longitud válidas.')
+
+# Mostrar avistamientos registrados
+st.subheader('Avistamientos Registrados')
+avistamientos = obtener_avistamientos()
+
+# Mostrar los avistamientos en una tabla
+if avistamientos:
+    for avistamiento in avistamientos:
+        st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
+else:
+    st.write("No se han registrado avistamientos.")
+
