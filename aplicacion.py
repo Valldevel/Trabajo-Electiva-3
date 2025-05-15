@@ -6,8 +6,7 @@ from datetime import datetime
 import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
-import io
-import pandas as pd  # Importamos pandas para manejar el DataFrame
+import io  # Asegúrate de importar io
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -115,7 +114,7 @@ if uploaded_file is not None:
     description = class_descriptions.get(prediction, "Descripción no disponible.")
     
     # Mostrar imagen clasificada
-    buffered = io.BytesIO()
+    buffered = io.BytesIO()  # Esto debería funcionar sin problemas ahora que se importa io
     img.save(buffered, format="JPEG")
     image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
     st.image(img, caption="Imagen clasificada", use_column_width=True)
@@ -139,12 +138,6 @@ avistamientos = obtener_avistamientos()
 
 # Mostrar los avistamientos en una tabla
 if avistamientos:
-    # Convertir los avistamientos en un DataFrame de pandas
-    df_avistamientos = pd.DataFrame(avistamientos)
-
-    # Mostrar los avistamientos en un mapa
-    st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
-
     for avistamiento in avistamientos:
         st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
 else:
