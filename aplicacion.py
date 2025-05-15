@@ -7,6 +7,8 @@ import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
 import pandas as pd  # Asegúrate de tener pandas instalado
+import io  # Esta es la importación que te falta
+
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
