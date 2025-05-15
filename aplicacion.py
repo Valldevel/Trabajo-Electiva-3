@@ -6,7 +6,9 @@ from datetime import datetime
 import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
-import io  # Asegúrate de importar io
+import io
+import pandas as pd  # Importamos pandas para manejar el DataFrame
+import streamlit.components.v1 as components  # Para incrustar HTML/JS
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -114,7 +116,7 @@ if uploaded_file is not None:
     description = class_descriptions.get(prediction, "Descripción no disponible.")
     
     # Mostrar imagen clasificada
-    buffered = io.BytesIO()  # Esto debería funcionar sin problemas ahora que se importa io
+    buffered = io.BytesIO()
     img.save(buffered, format="JPEG")
     image_data = base64.b64encode(buffered.getvalue()).decode('utf-8')
     st.image(img, caption="Imagen clasificada", use_column_width=True)
@@ -136,8 +138,46 @@ if st.button('Guardar Avistamiento'):
 st.subheader('Avistamientos Registrados')
 avistamientos = obtener_avistamientos()
 
-# Mostrar los avistamientos en una tabla
+# Mostrar el mapa de Google Maps con la API
+st.subheader('Mapa de Google Maps')
+html_code = f"""
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Mapa de Avistamientos</title>
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZR_MdAc09QAW0nWJvlCdcwIx_CQQoM2Y&callback=initMap">
+    </script>
+    <script type="text/javascript">
+      function initMap() {{
+        var map = new google.maps.Map(document.getElementById('map'), {{
+          zoom: 10,
+          center: {{lat: {lat}, lng: {lng}}}
+        }});
+
+        var marker = new google.maps.Marker({{
+          position: {{lat: {lat}, lng: {lng}}},
+          map: map
+        }});
+      }}
+    </script>
+  </head>
+  <body onload="initMap()">
+    <div id="map" style="height: 500px; width: 100%;"></div>
+  </body>
+</html>
+"""
+
+components.html(html_code, height=600)
+
+# Mostrar los avistamientos en el mapa
 if avistamientos:
+    # Convertir los avistamientos en un DataFrame de pandas
+    df_avistamientos = pd.DataFrame(avistamientos)
+
+    # Mostrar los avistamientos en un mapa
+    st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
+
     for avistamiento in avistamientos:
         st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
 else:
