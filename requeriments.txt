@@ -1,6 +1,10 @@
-Flask
-tensorflow
+streamlit
+tensorflow>=2.10
 numpy
-Pillow
-gdown
+pillow
+matplotlib
+seaborn
+scikit-learn
+pandas
 openpyxl
+gdown
