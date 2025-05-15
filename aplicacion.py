@@ -6,9 +6,7 @@ from datetime import datetime
 import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
-import io
-import pandas as pd  # Importamos pandas para manejar el DataFrame
-import streamlit.components.v1 as components  # Para incrustar HTML/JS
+import pandas as pd  # Asegúrate de tener pandas instalado
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -134,56 +132,22 @@ if st.button('Guardar Avistamiento'):
     else:
         st.error('Por favor, ingrese una latitud y longitud válidas.')
 
-# Mostrar avistamientos registrados
+# Mostrar los avistamientos registrados en la tabla y en el mapa
 st.subheader('Avistamientos Registrados')
 avistamientos = obtener_avistamientos()
 
-# Mostrar el mapa de Google Maps con la API
-st.subheader('Mapa de Google Maps')
-html_code = f"""
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Mapa de Avistamientos</title>
-    <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZR_MdAc09QAW0nWJvlCdcwIx_CQQoM2Y&callback=initMap">
-    </script>
-    <script type="text/javascript">
-      function initMap() {{
-        var map = new google.maps.Map(document.getElementById('map'), {{
-          zoom: 10,
-          center: {{lat: {lat}, lng: {lng}}}
-        }});
-
-        var marker = new google.maps.Marker({{
-          position: {{lat: {lat}, lng: {lng}}},
-          map: map
-        }});
-      }}
-    </script>
-  </head>
-  <body onload="initMap()">
-    <div id="map" style="height: 500px; width: 100%;"></div>
-  </body>
-</html>
-"""
-
-components.html(html_code, height=600)
-
-# Mostrar los avistamientos en el mapa
 if avistamientos:
     # Convertir los avistamientos en un DataFrame de pandas
     df_avistamientos = pd.DataFrame(avistamientos)
 
-    # Verificar que las columnas estén correctamente renombradas (en minúsculas)
+    # Renombrar las columnas para que sean compatibles con st.map
     df_avistamientos = df_avistamientos.rename(columns={'lat': 'latitude', 'lng': 'longitude'})
 
-    # Mostrar el mapa de Streamlit con las coordenadas de los avistamientos
+    # Mostrar el mapa con los avistamientos
     st.map(df_avistamientos[['latitude', 'longitude']])
 
-    # Mostrar los avistamientos en texto
-    for avistamiento in avistamientos:
-        st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
+    # Mostrar los avistamientos en una tabla
+    st.dataframe(df_avistamientos)  # Mostrar los avistamientos en una tabla
+
 else:
     st.write("No se han registrado avistamientos.")
-
