@@ -6,8 +6,7 @@ from datetime import datetime
 import openpyxl
 from openpyxl import Workbook
 from tensorflow.keras.models import load_model
-import pandas as pd
-import io
+import pandas as pd  # Asegúrate de tener pandas instalado
 
 # Lista de clases (etiquetas) de tu modelo
 class_names = [
@@ -133,16 +132,22 @@ if st.button('Guardar Avistamiento'):
     else:
         st.error('Por favor, ingrese una latitud y longitud válidas.')
 
-# Mostrar avistamientos registrados
+# Mostrar los avistamientos registrados en la tabla y en el mapa
 st.subheader('Avistamientos Registrados')
 avistamientos = obtener_avistamientos()
 
-# Mostrar los avistamientos en un mapa
 if avistamientos:
+    # Convertir los avistamientos en un DataFrame de pandas
     df_avistamientos = pd.DataFrame(avistamientos)
-    st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
-    
+
+    # Renombrar las columnas para que sean compatibles con st.map
+    df_avistamientos = df_avistamientos.rename(columns={'lat': 'latitude', 'lng': 'longitude'})
+
+    # Mostrar el mapa con los avistamientos
+    st.map(df_avistamientos[['latitude', 'longitude']])
+
     # Mostrar los avistamientos en una tabla
-    st.write(df_avistamientos[['lat', 'lng', 'prediction', 'fecha_hora']])
+    st.dataframe(df_avistamientos)  # Mostrar los avistamientos en una tabla
+
 else:
     st.write("No se han registrado avistamientos.")
