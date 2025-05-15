@@ -138,6 +138,19 @@ if st.button('Guardar Avistamiento'):
 st.subheader('Avistamientos Registrados')
 avistamientos = obtener_avistamientos()
 
+# Mostrar los avistamientos en una tabla
+if avistamientos:
+    # Convertir los avistamientos en un DataFrame de pandas
+    df_avistamientos = pd.DataFrame(avistamientos)
+
+    # Mostrar los avistamientos en un mapa
+    st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
+
+    for avistamiento in avistamientos:
+        st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
+else:
+    st.write("No se han registrado avistamientos.")
+
 # Mostrar el mapa de Google Maps con la API
 st.subheader('Mapa de Google Maps')
 html_code = f"""
@@ -175,9 +188,13 @@ if avistamientos:
     # Convertir los avistamientos en un DataFrame de pandas
     df_avistamientos = pd.DataFrame(avistamientos)
 
-    # Mostrar los avistamientos en un mapa
-    st.map(df_avistamientos[['lat', 'lng']])  # Mostrar en el mapa
+    # Verificar que las columnas estén correctamente renombradas (en minúsculas)
+    df_avistamientos = df_avistamientos.rename(columns={'lat': 'latitude', 'lng': 'longitude'})
 
+    # Mostrar el mapa de Streamlit con las coordenadas de los avistamientos
+    st.map(df_avistamientos[['latitude', 'longitude']])
+
+    # Mostrar los avistamientos en texto
     for avistamiento in avistamientos:
         st.write(f"Lat: {avistamiento['lat']}, Lng: {avistamiento['lng']}, Predicción: {avistamiento['prediction']}, Fecha y Hora: {avistamiento['fecha_hora']}")
 else:
